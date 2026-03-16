@@ -66,8 +66,30 @@ map('n', '<C-h>', ':bnext<CR>')
 map({ 'i', 'c' }, '<S-Insert>', '<C-R>+')
 map('n', '<Leader>n', '<Cmd>CocCommand explorer ~<CR>')
 map('n', '<Leader>o', '<Cmd>CocCommand explorer --sources=buffer+,file+ --position floating ~<CR>')
-map('n', '<C-t>', function() cmd([[exe v:count1 . "ToggleTerm"]]) end)
-map('i', '<C-t>', [[<Esc><Cmd>exe v:count1 . "ToggleTerm"<CR>]])
+
+local function open_toggleterm_here()
+  local count = vim.v.count1
+  local file = vim.api.nvim_buf_get_name(0)
+  local dir
+  if file == "" then
+    dir = vim.fn.expand("$USERPROFILE")
+  else
+    dir = vim.fn.fnamemodify(file, ":h")
+  end
+  if dir == "" then
+    dir = vim.fn.expand("$HOME")
+  end
+  if dir == "" then
+    dir = vim.fn.getcwd()
+  end
+  dir = dir:gsub("\\", "/")
+  cmd(("%d ToggleTerm dir=%s"):format(count, dir))
+end
+map("n", "<C-t>", open_toggleterm_here, { silent = true })
+map('i', '<C-t>', function()
+  vim.cmd("stopinsert")
+  open_toggleterm_here()
+end, { silent = true })
 
 local aug = vim.api.nvim_create_augroup('toggleterm_local_map', { clear = true })
 vim.api.nvim_create_autocmd('TermEnter', {
