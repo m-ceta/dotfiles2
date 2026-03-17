@@ -55,17 +55,12 @@ vim.g.mapleader = ' '
 local map = vim.keymap.set
 local cmd = vim.cmd
 
-map({ 'n', 'x', 'o' }, '<Leader>I', 'gg=<S-g><C-o><C-o>zz')
-map({ 'n', 'x', 'o' }, '<Leader>s', ':%s/')
-map('n', '<leader>H', ':sp<CR>')
-map('n', '<leader>V', ':vs<CR>')
 map('t', '<Esc>', [[<C-\><C-n>]])
 map('t', '<C-[>', [[<C-\><C-n>]])
-map('n', '<C-l>', ':bprev<CR>')
-map('n', '<C-h>', ':bnext<CR>')
-map({ 'i', 'c' }, '<S-Insert>', '<C-R>+')
 map('n', '<Leader>n', '<Cmd>CocCommand explorer ~<CR>')
 map('n', '<Leader>o', '<Cmd>CocCommand explorer --sources=buffer+,file+ --position floating ~<CR>')
+map("n", "<C-l>", ":tabnext<CR>")
+map("n", "<C-h>", ":tabprevious<CR>")
 
 local function open_toggleterm_here()
   local count = vim.v.count1
@@ -103,36 +98,65 @@ vim.api.nvim_create_autocmd('TermEnter', {
 local function smart_close_buffer_and_tab()
   local buf = vim.api.nvim_get_current_buf()
 
-  -- まず現在バッファを削除
-  vim.api.nvim_buf_delete(buf, { force = false })
+  if vim.api.nvim_buf_is_valid(buf)
+    and vim.bo[buf].buftype == ""
+    and vim.bo[buf].modified
+  then
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name == "" then
+      name = "[No Name]"
+    else
+      name = vim.fn.fnamemodify(name, ":t")
+    end
 
-  -- 削除後にタブ内を確認して必要なら閉じる
+    local choice = vim.fn.confirm(
+      string.format('"%s" は未保存です。閉じますか？', name),
+      "&Yes\n&No",
+      2
+    )
+
+    if choice ~= 1 then
+      return
+    end
+
+    vim.api.nvim_buf_delete(buf, { force = true })
+  else
+    vim.api.nvim_buf_delete(buf, { force = false })
+  end
+
   vim.schedule(function()
+    if not vim.api.nvim_tabpage_is_valid(0) then
+      return
+    end
+
     local tab = vim.api.nvim_get_current_tabpage()
     local wins = vim.api.nvim_tabpage_list_wins(tab)
 
     local has_normal_buffer = false
     for _, win in ipairs(wins) do
-      local b = vim.api.nvim_win_get_buf(win)
-      if vim.api.nvim_buf_is_valid(b) then
-        local bt = vim.bo[b].buftype
-        local name = vim.api.nvim_buf_get_name(b)
-        if bt == "" and name ~= "" then
-          has_normal_buffer = true
-          break
+      if vim.api.nvim_win_is_valid(win) then
+        local b = vim.api.nvim_win_get_buf(win)
+        if vim.api.nvim_buf_is_valid(b) then
+          local bt = vim.bo[b].buftype
+          local name = vim.api.nvim_buf_get_name(b)
+          if bt == "" and name ~= "" then
+            has_normal_buffer = true
+            break
+          end
         end
       end
     end
 
-    if not has_normal_buffer and vim.fn.tabpagenr("$") > 1 then
-      vim.cmd("tabclose")
+    if not has_normal_buffer then
+      if vim.fn.tabpagenr("$") > 1 then
+        vim.cmd("tabclose")
+      else
+        vim.cmd("enew")
+      end
     end
   end)
 end
-
-vim.keymap.set("n", "<leader>q", smart_close_buffer_and_tab, {
-  desc = "Close buffer, then close tab if empty",
-})
+map("n", "<leader>q", smart_close_buffer_and_tab)
 
 -- =========================
 -- Plugins
