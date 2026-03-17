@@ -100,6 +100,40 @@ vim.api.nvim_create_autocmd('TermEnter', {
   end,
 })
 
+local function smart_close_buffer_and_tab()
+  local buf = vim.api.nvim_get_current_buf()
+
+  -- まず現在バッファを削除
+  vim.api.nvim_buf_delete(buf, { force = false })
+
+  -- 削除後にタブ内を確認して必要なら閉じる
+  vim.schedule(function()
+    local tab = vim.api.nvim_get_current_tabpage()
+    local wins = vim.api.nvim_tabpage_list_wins(tab)
+
+    local has_normal_buffer = false
+    for _, win in ipairs(wins) do
+      local b = vim.api.nvim_win_get_buf(win)
+      if vim.api.nvim_buf_is_valid(b) then
+        local bt = vim.bo[b].buftype
+        local name = vim.api.nvim_buf_get_name(b)
+        if bt == "" and name ~= "" then
+          has_normal_buffer = true
+          break
+        end
+      end
+    end
+
+    if not has_normal_buffer and vim.fn.tabpagenr("$") > 1 then
+      vim.cmd("tabclose")
+    end
+  end)
+end
+
+vim.keymap.set("n", "<leader>q", smart_close_buffer_and_tab, {
+  desc = "Close buffer, then close tab if empty",
+})
+
 -- =========================
 -- Plugins
 -- =========================
