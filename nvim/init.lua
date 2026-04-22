@@ -61,6 +61,13 @@ map('n', '<Leader>n', '<Cmd>CocCommand explorer ~<CR>')
 map('n', '<Leader>o', '<Cmd>CocCommand explorer --sources=buffer+,file+ --position floating ~<CR>')
 map("n", "<C-l>", ":BufferNext<CR>")
 map("n", "<C-h>", ":BufferPrevious<CR>")
+map("n", "<leader>q", ":BufferClose<CR>")
+map("n", "<C-s>", function()
+  local file = vim.fn.input("File: ", "", "file")
+  if file ~= "" then
+    vim.cmd(":vert DiffSplit " .. vim.fn.fnameescape(file))
+  end
+end, { desc = "Open file by prompt" })
 
 local function open_toggleterm_here()
   local count = vim.v.count1
@@ -94,69 +101,6 @@ vim.api.nvim_create_autocmd('TermEnter', {
     map('t', '<C-t>', function() cmd([[exe v:count1 . "ToggleTerm"]]) end)
   end,
 })
-
-local function smart_close_buffer_and_tab()
-  local buf = vim.api.nvim_get_current_buf()
-
-  if vim.api.nvim_buf_is_valid(buf)
-    and vim.bo[buf].buftype == ""
-    and vim.bo[buf].modified
-  then
-    local name = vim.api.nvim_buf_get_name(buf)
-    if name == "" then
-      name = "[No Name]"
-    else
-      name = vim.fn.fnamemodify(name, ":t")
-    end
-
-    local choice = vim.fn.confirm(
-      string.format('"%s" は未保存です。閉じますか？', name),
-      "&Yes\n&No",
-      2
-    )
-
-    if choice ~= 1 then
-      return
-    end
-
-    vim.api.nvim_buf_delete(buf, { force = true })
-  else
-    vim.api.nvim_buf_delete(buf, { force = false })
-  end
-
-  vim.schedule(function()
-    if not vim.api.nvim_tabpage_is_valid(0) then
-      return
-    end
-
-    local tab = vim.api.nvim_get_current_tabpage()
-    local wins = vim.api.nvim_tabpage_list_wins(tab)
-
-    local has_normal_buffer = false
-    for _, win in ipairs(wins) do
-      if vim.api.nvim_win_is_valid(win) then
-        local b = vim.api.nvim_win_get_buf(win)
-        if vim.api.nvim_buf_is_valid(b) then
-          local bt = vim.bo[b].buftype
-          local name = vim.api.nvim_buf_get_name(b)
-          if bt == "" and name ~= "" then
-            has_normal_buffer = true
-            break
-          end
-        end
-      end
-    end
-
-    if not has_normal_buffer then
-      if vim.fn.tabpagenr("$") > 1 then
-        vim.cmd("tabclose")
-      else
-        vim.cmd("enew")
-      end
-    end
-  end)
-end
-map("n", "<leader>q", smart_close_buffer_and_tab)
 
 -- =========================
 -- Plugins
