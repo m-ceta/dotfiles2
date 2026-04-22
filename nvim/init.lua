@@ -59,8 +59,8 @@ map('t', '<Esc>', [[<C-\><C-n>]])
 map('t', '<C-[>', [[<C-\><C-n>]])
 map('n', '<Leader>n', '<Cmd>CocCommand explorer ~<CR>')
 map('n', '<Leader>o', '<Cmd>CocCommand explorer --sources=buffer+,file+ --position floating ~<CR>')
-map("n", "<C-l>", ":bn<CR>")
-map("n", "<C-h>", ":bp<CR>")
+map("n", "<C-l>", ":BufferNext<CR>")
+map("n", "<C-h>", ":BufferPrevious<CR>")
 
 local function open_toggleterm_here()
   local count = vim.v.count1
